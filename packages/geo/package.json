@@ -1,0 +1,24 @@
+{
+  "name": "@jinnytty-gps/geo",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.ts*\""
+  },
+  "devDependencies": {
+    "@jinnytty-gps/eslint-config-custom": "^0.0.1",
+    "@jinnytty-gps/tsconfig": "^0.0.1",
+    "@types/node": "^18.17.5",
+    "eslint": "~8.10.0",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "@jinnytty-gps/model": "^0.0.1",
+    "@jinnytty-gps/utils": "^0.1.2",
+    "pino": "^8.15.0",
+    "ts-command-line-args": "~2.2.1"
+  }
+}

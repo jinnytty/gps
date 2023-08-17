@@ -1,0 +1,25 @@
+{
+  "name": "@jinnytty-gps/gps-client",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.ts*\""
+  },
+  "devDependencies": {
+    "@jinnytty-gps/eslint-config-custom": "^0.0.1",
+    "@jinnytty-gps/tsconfig": "^0.0.1",
+    "@types/node": "^18.17.5",
+    "@types/ws": "^8.5.5",
+    "eslint": "~8.10.0",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "@jinnytty-gps/api-model": "^0.0.1",
+    "typed-emitter": "^2.1.0",
+    "undici": "^5.23.0",
+    "websocket-as-promised": "^2.0.1"
+  }
+}

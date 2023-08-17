@@ -1,0 +1,7 @@
+{
+  "extends": "@jinnytty-gps/tsconfig/nestjs.json",
+  "include": ["./src/**/*"],
+  "compilerOptions": {
+    "outDir": "./dist"
+  }
+}
