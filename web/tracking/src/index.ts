@@ -101,13 +101,6 @@ async function checkToken(token?: string): Promise<string> {
 http
   .createServer(async function (req, res) {
     try {
-      const key = await checkToken(req.headers['authorization']);
-      if (key.length === 0) {
-        res.writeHead(401, { 'Content-Type': 'text/html' });
-        res.end();
-        return;
-      }
-
       const url = new URL('http://localhost' + req.url);
       console.log(url);
       if (!url.searchParams.has('lat')) {
@@ -115,7 +108,24 @@ http
         res.end();
         return;
       }
+
+      let key = '';
+      if (url.searchParams.has('accessToken')) {
+        key = await checkToken(url.searchParams.get('accessToken')!);
+      }
+      if (req.headers['authorization']) {
+        key = await checkToken(req.headers['authorization']);
+      }
+      if (key.length === 0) {
+        res.writeHead(401, { 'Content-Type': 'text/html' });
+        res.end();
+        return;
+      }
+
       const obj = paramsToObject(url.searchParams.entries());
+      if (obj['accessToken']) {
+        delete obj['accessToken'];
+      }
       const msg: RawPointMsg = {
         key,
         point: obj,

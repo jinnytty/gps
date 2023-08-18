@@ -11,6 +11,7 @@ interface ServiceConfig {
   accessToken: string;
   file: string[];
   wait: number;
+  accessTokenInUrl: boolean;
 }
 
 const ServiceConfigOpt: ArgumentConfig<ServiceConfig> = {
@@ -18,6 +19,7 @@ const ServiceConfigOpt: ArgumentConfig<ServiceConfig> = {
   accessToken: { type: String },
   file: { type: String, multiple: true },
   wait: { type: Number, defaultValue: 0 },
+  accessTokenInUrl: { type: Boolean, defaultValue: false },
 };
 
 interface Config extends ServiceConfig, FileConfig {}
@@ -45,16 +47,20 @@ for (let i = 0; i < config.file.length; ++i) {
   for await (const line of rl) {
     if (line.length === 0) continue;
     const data = JSON.parse(line);
-    const q = Object.keys(data)
-      .map((key) => {
-        return `${key}=${data[key]}`;
-      })
-      .join('&');
+    const param = new URLSearchParams();
+    Object.keys(data).forEach((key) => {
+      param.set(key, data[key]);
+    });
+    if (config.accessTokenInUrl) {
+      param.set('accessToken', config.accessToken);
+    }
 
-    await fetch(config.url + '?' + q, {
-      headers: {
-        Authorization: config.accessToken,
-      },
+    await fetch(config.url + '?' + param.toString(), {
+      headers: !config.accessTokenInUrl
+        ? {
+            Authorization: config.accessToken,
+          }
+        : {},
     });
     if (config.wait > 0) {
       await sleep(config.wait);
