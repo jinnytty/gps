@@ -25,7 +25,7 @@ export enum GpsClientStatus {
 }
 
 export type GpsClientEvents = {
-  point: (p: Point) => void;
+  point: (p: Point, started: number) => void;
   log: (l: Log) => void;
   distance: (l: Log) => void;
 };
@@ -150,7 +150,7 @@ export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsC
       const p = this.points.get(m.log);
       if (p) {
         p.push(m.point);
-        this.emit('point', m.point);
+        this.emit('point', m.point, m.log);
       }
     }
     if (msg.type === MessageType.DISTANCE) {
