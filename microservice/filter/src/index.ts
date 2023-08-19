@@ -9,7 +9,12 @@ import {
 } from '@jinnytty-gps/config';
 import { env2arg, initLogger, sendData } from '@jinnytty-gps/utils';
 import { Logger } from 'pino';
-import { PointMsg, RawPointMsg, Topics } from '@jinnytty-gps/message';
+import {
+  LogUpdateMsg,
+  PointMsg,
+  RawPointMsg,
+  Topics,
+} from '@jinnytty-gps/message';
 import { GpsLog, PrismaClient } from '@jinnytty-gps/prisma';
 import { Kafka, Consumer, Producer } from 'kafkajs';
 import { Point, RawPoint } from '@jinnytty-gps/model';
@@ -26,12 +31,14 @@ import { Readable } from 'stream';
 
 interface ServiceConfig {
   inputTopic: string;
-  outputTopic: string;
+  pointOutputTopic: string;
+  logOutputTopic: string;
 }
 
 const ServiceConfigOpt: ArgumentConfig<ServiceConfig> = {
   inputTopic: { type: String, defaultValue: Topics.gpsTrackingOutput },
-  outputTopic: { type: String, defaultValue: Topics.gpsFilterOutput },
+  pointOutputTopic: { type: String, defaultValue: Topics.gpsFilterOutput },
+  logOutputTopic: { type: String, defaultValue: Topics.gpsFilterLogUpdate },
 };
 
 interface Config extends ServiceConfig, KafkaConfig, RedisConfig, FileConfig {}
@@ -121,7 +128,9 @@ async function getLog(
 
   if (data) {
     const readable = new Readable();
+    readable._read = () => {};
     readable.push(data);
+    readable.push(null);
     const rl = readline.createInterface({
       input: readable,
       crlfDelay: Infinity,
@@ -209,13 +218,25 @@ await consumer.run({
       });
 
       // send
-      const outMsg: PointMsg = {
+      const outMsgPoint: PointMsg = {
         key: msg.key,
         point: newPoint,
       };
-      await sendData(producer, config.outputTopic, {
+      await sendData(producer, config.pointOutputTopic, {
         key: msg.key,
-        value: JSON.stringify(outMsg),
+        value: JSON.stringify(outMsgPoint),
+      });
+
+      const outMsgLog: LogUpdateMsg = {
+        key: msg.key,
+        logId: log.id,
+        started: log.started.getTime(),
+        distance: gps.distance,
+        last: point.timestamp * 1000,
+      };
+      await sendData(producer, config.logOutputTopic, {
+        key: msg.key,
+        value: JSON.stringify(outMsgLog),
       });
     }
   },

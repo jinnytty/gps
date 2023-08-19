@@ -10,7 +10,7 @@ import {
 import { env2arg, initLogger, sendData } from '@jinnytty-gps/utils';
 import { Logger } from 'pino';
 import { AccessToken, PrismaClient } from '@jinnytty-gps/prisma';
-import { PointMsg, Topics } from '@jinnytty-gps/message';
+import { LogUpdateMsg, PointMsg, Topics } from '@jinnytty-gps/message';
 import { Consumer, Kafka, Partitioners, Producer } from 'kafkajs';
 import { RawData, WebSocket, WebSocketServer } from 'ws';
 import { Client } from './Client.js';
@@ -21,13 +21,15 @@ import { Point } from '@jinnytty-gps/model';
 interface ServiceConfig {
   name: string;
   port: number;
-  inputTopic: string;
+  pointInputTopic: string;
+  logInputTopic: string;
 }
 
 const ServiceConfigOpt: ArgumentConfig<ServiceConfig> = {
   name: { type: String },
   port: { type: Number, defaultValue: 3000 },
-  inputTopic: { type: String, defaultValue: Topics.gpsFilterOutput },
+  pointInputTopic: { type: String, defaultValue: Topics.gpsFilterOutput },
+  logInputTopic: { type: String, defaultValue: Topics.gpsFilterLogUpdate },
 };
 
 interface Config extends ServiceConfig, KafkaConfig, RedisConfig, FileConfig {}
@@ -59,7 +61,9 @@ const consumer: Consumer = kafka.consumer({
   groupId: 'points-ws-' + config.name,
 });
 await consumer.connect();
-await consumer.subscribe({ topic: config.inputTopic });
+await consumer.subscribe({
+  topics: [config.pointInputTopic, config.logInputTopic],
+});
 
 const wss = new WebSocketServer({ port: config.port });
 
@@ -188,21 +192,36 @@ wss.on('connection', function connection(ws: WebSocket) {
 });
 
 await consumer.run({
-  eachMessage: async ({ message }) => {
+  eachMessage: async ({ topic, message }) => {
+    logger.trace({ topic }, 'message received');
     if (!message.key) return;
     if (!message.value) return;
 
     const trackingId = message.key.toString();
-    const msg: PointMsg = JSON.parse(message.value.toString());
-    const cl = clientsPerTracking.get(trackingId);
-    if (cl) {
-      cl.forEach((c) => {
-        c.sendPoint(msg.point);
-      });
+
+    if (topic === config.pointInputTopic) {
+      const msg: PointMsg = JSON.parse(message.value.toString());
+      logger.trace({ msg }, 'point message');
+      const cl = clientsPerTracking.get(trackingId);
+      if (cl) {
+        cl.forEach((c) => {
+          c.sendPoint(msg.point);
+        });
+      }
+      const ci = trackingInit.get(trackingId);
+      if (ci) {
+        ci.forEach((c) => c.queuePoint(msg.point));
+      }
     }
-    const ci = trackingInit.get(trackingId);
-    if (ci) {
-      ci.forEach((c) => c.queuePoint(msg.point));
+    if (topic === config.logInputTopic) {
+      const msg: LogUpdateMsg = JSON.parse(message.value.toString());
+      logger.trace({ msg }, 'log update message');
+      const cl = clientsPerTracking.get(trackingId);
+      if (cl) {
+        cl.forEach((c) => {
+          c.sendDistance(Math.floor(msg.started / 1000), msg.distance);
+        });
+      }
     }
   },
 });
