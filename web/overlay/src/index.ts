@@ -52,7 +52,10 @@ export interface Config {
 export async function app(config: Config) {
   console.log('starting app', config);
   const [lat, lng, zoom] = config.location.split(',').map((v) => Number(v));
-  const map = L.map('map', {}).setView([lat, lng], zoom);
+  const map = L.map('map', {
+    zoomControl: false,
+    attributionControl: false,
+  }).setView([lat, lng], zoom);
   const tileData = getTileData(config.tile);
   L.tileLayer(tileData.url, {
     attribution: tileData.attribution,
@@ -78,7 +81,6 @@ export async function app(config: Config) {
       }
     });
   }
-  console.log('point count for line', points.length);
 
   const polyline = new L.Polyline(points, {
     color: '#' + config.color,

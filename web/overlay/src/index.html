@@ -27,12 +27,12 @@
       import { app } from './index.ts';
 
       const param = new URLSearchParams(window.location.search);
-      const key = process.env.KEY;
-      const accessToken = process.env.ACCESS_TOKEN;
-      const location = process.env.LOCATION;
-      const tile = process.env.TILE;
-      let color = process.env.PATH_COLOR;
-      console.log('tile', tile, color, location);
+      const key = param.get('key');
+      const accessToken = param.get('accessToken');
+      const location = param.get('location');
+      const tile = param.get('tile');
+      let color = param.get('color');
+      console.log('tile', tile);
 
       if (!color) color = 'eb384a';
 
