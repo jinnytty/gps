@@ -1,4 +1,5 @@
 import {
+  DistanceMessage,
   Log,
   LogMessage,
   Message,
@@ -26,6 +27,7 @@ export enum GpsClientStatus {
 export type GpsClientEvents = {
   point: (p: Point) => void;
   log: (l: Log) => void;
+  distance: (l: Log) => void;
 };
 
 export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsClientEvents>) {
@@ -149,6 +151,16 @@ export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsC
       if (p) {
         p.push(m.point);
         this.emit('point', m.point);
+      }
+    }
+    if (msg.type === MessageType.DISTANCE) {
+      const m: DistanceMessage = msg as any;
+      if (this.tracking) {
+        const l = this.tracking.logs.filter((v) => v.started === m.log);
+        if (l.length > 0) {
+          l[0].distance = m.distance;
+          this.emit('distance', l[0]);
+        }
       }
     }
   }
