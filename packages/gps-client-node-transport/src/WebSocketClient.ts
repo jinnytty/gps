@@ -31,6 +31,13 @@ export class WebSocketClient {
         packMessage: (data) => JSON.stringify(data),
         unpackMessage: (data) => JSON.parse(data.toString()),
       };
+      /*if (!isBrowser()) {
+      c = {
+        ...c,
+        createWebSocket: (url) => new WebSocket(url),
+        extractMessageData: (event) => event,
+      };
+    }*/
       console.log('ws config', c);
       this.ws = new WebSocketAsPromised(
         this.config.endpoint + '?key=' + this.config.accessKey,

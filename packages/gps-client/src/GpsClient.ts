@@ -11,12 +11,14 @@ import {
 import { WebSocketClient } from './WebSocketClient.js';
 import EventEmitter from 'events';
 import TypedEventEmitter from 'typed-emitter';
+import WebSocketAsPromised from 'websocket-as-promised';
 
 export interface GpsClientConfig {
   apiEndpoint: string;
   wsEndpoint: string;
   name: string;
   accessKey: string;
+  transport?: WebSocketAsPromised;
 }
 
 export enum GpsClientStatus {
@@ -28,6 +30,7 @@ export type GpsClientEvents = {
   point: (p: Point, started: number) => void;
   log: (l: Log) => void;
   distance: (l: Log) => void;
+  message: (message: Message) => void;
 };
 
 export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsClientEvents>) {
@@ -47,6 +50,7 @@ export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsC
       listener: (msg: Message) => {
         this.onMessage(msg);
       },
+      transport: config.transport,
     });
   }
 
@@ -163,5 +167,7 @@ export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsC
         }
       }
     }
+
+    this.emit('message', msg);
   }
 }
