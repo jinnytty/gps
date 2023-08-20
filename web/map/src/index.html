@@ -30,8 +30,15 @@
       const key = process.env.KEY;
       const accessToken = process.env.ACCESS_TOKEN;
       const location = process.env.LOCATION;
-      const tile = process.env.TILE;
+      let tile = process.env.TILE;
       let color = process.env.PATH_COLOR;
+
+      if (param.get('color')) {
+        color = param.get('color');
+      }
+      if (param.get('tile')) {
+        tile = param.get('tile');
+      }
       console.log('tile', tile, color, location);
 
       if (!color) color = 'eb384a';
