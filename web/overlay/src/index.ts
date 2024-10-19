@@ -1,4 +1,4 @@
-import { LatLng, Map } from 'leaflet';
+import { LatLng } from 'leaflet';
 import * as L from 'leaflet';
 import { GpsClient, GpsClientConfig } from '@jinnytty-gps/gps-client';
 import { Log, Point } from '@jinnytty-gps/api-model';
@@ -42,57 +42,115 @@ function getTileData(tile: string): TileData {
 }
 
 export interface Config {
+  lat: number;
+  lng: number;
+  zoom: number;
+  tile?: string;
+  gps: GpsConfig[];
+}
+
+export interface GpsConfig {
   key: string;
   accessToken: string;
-  location: string;
-  tile: string;
   color: string;
+  icon?: string;
+  iconWidth?: number;
+  iconHeight?: number;
+  iconAnchorX?: number;
+  iconAnchorY?: number;
+  zIndex?: number;
 }
 
 export async function app(config: Config) {
   console.log('starting app', config);
-  const [lat, lng, zoom] = config.location.split(',').map((v) => Number(v));
+
   const map = L.map('map', {
     zoomControl: false,
     attributionControl: false,
-  }).setView([lat, lng], zoom);
-  const tileData = getTileData(config.tile);
+  }).setView([config.lat, config.lng], config.zoom);
+  const tileData = getTileData(config.tile ? config.tile : '');
   L.tileLayer(tileData.url, {
     attribution: tileData.attribution,
   }).addTo(map);
 
-  const gpsConfig: GpsClientConfig = {
-    apiEndpoint: process.env.API_ENDPOINT!,
-    wsEndpoint: process.env.WS_ENDPOINT!,
-    name: config.key,
-    accessKey: config.accessToken,
+  let padding = 0;
+  const lastPoint: Map<string, LatLng> = new Map();
+  const center = () => {
+    const points = Array.from(lastPoint.values());
+    map.fitBounds(L.latLngBounds(points), {
+      padding: [padding, padding],
+    });
   };
-  const gps = new GpsClient(gpsConfig);
-  console.log('init gps client', gpsConfig);
-  await gps.init();
-  console.log(gps.tracking);
 
-  let points: LatLng[] = [];
-  if (gps.tracking) {
-    gps.tracking.logs.forEach((log) => {
-      const p = gps.points.get(log.started);
-      if (p) {
-        points = points.concat(p.map((v) => new LatLng(v.lat, v.lng)));
+  for (let i = 0; i < config.gps.length; ++i) {
+    const gpsc = config.gps[i];
+    const gpsConfig: GpsClientConfig = {
+      apiEndpoint: process.env.API_ENDPOINT!,
+      wsEndpoint: process.env.WS_ENDPOINT!,
+      name: gpsc.key,
+      accessKey: gpsc.accessToken,
+    };
+    const gps = new GpsClient(gpsConfig);
+    console.log('init gps client', gpsConfig);
+    await gps.init();
+    console.log(gps.tracking);
+
+    let points: LatLng[] = [];
+    if (gps.tracking) {
+      gps.tracking.logs.forEach((log) => {
+        const p = gps.points.get(log.started);
+        if (p) {
+          points = points.concat(p.map((v) => new LatLng(v.lat, v.lng)));
+        }
+      });
+    }
+
+    const polyline = new L.Polyline(points, {
+      color: '#' + gpsc.color,
+      smoothFactor: 0,
+    });
+    polyline.addTo(map);
+    let mLat = config.lat;
+    let mLng = config.lng;
+    if (points.length > 0) {
+      const p = points[points.length - 1];
+
+      mLat = p.lat;
+      mLng = p.lng;
+      lastPoint.set(gpsc.key, p);
+      center();
+    }
+
+    let marker: L.Marker | undefined = undefined;
+
+    if (gpsc.icon) {
+      const w = gpsc.iconWidth ? gpsc.iconWidth : 32;
+      const h = gpsc.iconHeight ? gpsc.iconHeight : 32;
+      const x = gpsc.iconAnchorX ? gpsc.iconAnchorX : Math.min(w / 2);
+      const y = gpsc.iconAnchorY ? gpsc.iconAnchorY : h;
+      const icon = L.icon({
+        iconUrl: gpsc.icon,
+        iconSize: [w, h],
+        iconAnchor: [x, y],
+      });
+      if (w > padding) padding = w;
+      if (h > padding) padding = h;
+      const mopt: L.MarkerOptions = { icon };
+      if (gpsc.zIndex) {
+        mopt.zIndexOffset = gpsc.zIndex;
+      }
+      marker = L.marker([mLat, mLng], mopt).addTo(map);
+    }
+
+    gps.on('point', (p: Point) => {
+      const newPoint = new LatLng(p.lat, p.lng);
+      polyline.addLatLng(newPoint);
+
+      lastPoint.set(gpsc.key, newPoint);
+      center();
+      if (marker) {
+        marker.setLatLng(newPoint);
       }
     });
   }
-
-  const polyline = new L.Polyline(points, {
-    color: '#' + config.color,
-    smoothFactor: 0,
-  });
-  polyline.addTo(map);
-  if (points.length > 0) {
-    map.setView(points[points.length - 1]);
-  }
-  gps.on('point', (p: Point) => {
-    const newPoint = new LatLng(p.lat, p.lng);
-    polyline.addLatLng(newPoint);
-    map.setView(newPoint);
-  });
 }

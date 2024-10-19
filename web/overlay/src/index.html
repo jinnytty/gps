@@ -25,24 +25,13 @@
     <div id="map"></div>
     <script type="module">
       import { app } from './index.ts';
+      import { parseParams } from './utils.ts';
 
       const param = new URLSearchParams(window.location.search);
-      const key = param.get('key');
-      const accessToken = param.get('accessToken');
-      const location = param.get('location');
-      const tile = param.get('tile');
-      let color = param.get('color');
-      console.log('tile', tile);
+      const config = parseParams(param);
+      console.log('config', config);
 
-      if (!color) color = 'eb384a';
-
-      app({
-        key,
-        accessToken,
-        location,
-        tile,
-        color,
-      });
+      app(config);
     </script>
   </body>
 </html>
