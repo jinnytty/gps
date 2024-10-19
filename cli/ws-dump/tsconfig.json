@@ -1,8 +1,0 @@
-{
-  "extends": "@jinnytty-gps/tsconfig/library.json",
-  "include": ["."],
-  "exclude": ["dist", "build", "node_modules"],
-  "compilerOptions": {
-    "outDir": "./dist"
-  }
-}
