@@ -87,7 +87,12 @@ export async function app(config: Config) {
     smoothFactor: 0,
   });
   polyline.addTo(map);
+  if (points.length > 0) {
+    map.setView(points[points.length - 1]);
+  }
   gps.on('point', (p: Point) => {
-    polyline.addLatLng(new LatLng(p.lat, p.lng));
+    const newPoint = new LatLng(p.lat, p.lng);
+    polyline.addLatLng(newPoint);
+    map.setView(newPoint);
   });
 }
