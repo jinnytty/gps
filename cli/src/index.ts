@@ -2,6 +2,7 @@ import { ArgumentConfig, parse } from 'ts-command-line-args';
 import { default as clearTracking } from './clear-tracking/index.js';
 import { default as feed } from './feed/index.js';
 import { default as wsDump } from './ws-dump/index.js';
+import { default as createTracking } from './create-tracking/index.js';
 
 interface CommandConfig {
   command: string;
@@ -30,5 +31,8 @@ switch (command.command) {
     break;
   case 'ws-dump':
     wsDump(args);
+    break;
+  case 'create-tracking':
+    createTracking(args);
     break;
 }
