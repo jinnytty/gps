@@ -68,7 +68,7 @@ export async function app(config: Config) {
     accessKey: config.accessToken,
   };
   const gps = new GpsClient(gpsConfig);
-  console.log('init gps client');
+  console.log('init gps client', gpsConfig);
   await gps.init();
   console.log(gps.tracking);
 
