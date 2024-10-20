@@ -95,6 +95,7 @@ export async function app(config: Config) {
     console.log('init gps client', gpsConfig);
     await gps.init();
     console.log(gps.tracking);
+    await gps.connect();
 
     let points: LatLng[] = [];
     if (gps.tracking) {

@@ -69,7 +69,10 @@ export class GpsClient extends (EventEmitter as new () => TypedEventEmitter<GpsC
       logWait.push(this.updateLogs(logs));
     }
     await Promise.all(logWait);
+  }
 
+  async connect(): Promise<void> {
+    if (!this.tracking) return;
     let llog = 0;
     let ltime = 0;
     if (this.tracking.logs.length > 0) {
