@@ -1,15 +1,13 @@
 import { LatLng, Map } from 'leaflet';
 import * as L from 'leaflet';
 import { GpsClient, GpsClientConfig } from '@jinnytty-gps/gps-client';
-import { Log, Point } from '@jinnytty-gps/api-model';
+import { Log, MapDisplayConfig, Point } from '@jinnytty-gps/api-model';
 
 export interface TileData {
   name: string;
   url: string;
   attribution: string;
 }
-
-console.log('leaflet', L);
 
 const DefaultTiles: TileData[] = [
   {
@@ -41,23 +39,114 @@ function getTileData(tile: string): TileData {
   return DefaultTiles[0];
 }
 
-export interface Config {
-  key: string;
-  accessToken: string;
-  location: string;
-  tile: string;
-  color: string;
-}
+export async function app(tile: string) {
+  console.log('starting app', tile);
 
-export async function app(config: Config) {
-  console.log('starting app', config);
-  const [lat, lng, zoom] = config.location.split(',').map((v) => Number(v));
-  const map = L.map('map', {}).setView([lat, lng], zoom);
-  const tileData = getTileData(config.tile);
+  const apiEndpoint = process.env.API_ENDPOINT!;
+  const configName = process.env.CONFIG_NAME!;
+
+  const req = await fetch(`${apiEndpoint}/config/${configName}`);
+  const config: MapDisplayConfig = await req.json();
+  console.log('config', config);
+
+  const map = L.map('map', {}).setView([config.lat, config.lng], config.zoom);
+  const tileData = getTileData(tile);
   L.tileLayer(tileData.url, {
     attribution: tileData.attribution,
   }).addTo(map);
 
+  // do the last tracking as live first
+  for (let i = 0; i < config.tracking.length; ++i) {
+    const t = config.tracking[i];
+    if (t.trackingIds.length === 0) continue;
+    const name = t.trackingIds[t.trackingIds.length - 1];
+    const gpsConfig: GpsClientConfig = {
+      apiEndpoint: process.env.API_ENDPOINT!,
+      wsEndpoint: process.env.WS_ENDPOINT!,
+      name: name,
+      accessKey: config.accessToken,
+    };
+    const gps = new GpsClient(gpsConfig);
+    console.log('init gps client', gpsConfig);
+    await gps.init();
+    console.log(gps.tracking);
+    //await gps.connect();
+
+    let points: LatLng[] = [];
+    if (gps.tracking) {
+      gps.tracking.logs.forEach((log) => {
+        const p = gps.points.get(log.started);
+        if (p) {
+          points = points.concat(p.map((v) => new LatLng(v.lat, v.lng)));
+        }
+      });
+    }
+    let mLat = config.lat;
+    let mLng = config.lng;
+    if (points.length > 0) {
+      const p = points[points.length - 1];
+
+      mLat = p.lat;
+      mLng = p.lng;
+    }
+
+    const polyline = new L.Polyline(points, {
+      color: t.color,
+      smoothFactor: 0,
+    });
+    polyline.addTo(map);
+    const icon = L.icon({
+      iconUrl: t.icon.url,
+      iconSize: [t.icon.width, t.icon.height],
+      iconAnchor: [t.icon.anchorX, t.icon.anchorY],
+    });
+    const marker = L.marker([mLat, mLng], { icon, zIndexOffset: 1001 }).addTo(
+      map
+    );
+    gps.on('point', (p: Point) => {
+      const newPoint = new LatLng(p.lat, p.lng);
+      polyline.addLatLng(newPoint);
+
+      if (marker) {
+        marker.setLatLng(newPoint);
+      }
+    });
+  }
+
+  // draw the remaining as static line
+  for (let i = 0; i < config.tracking.length; ++i) {
+    const t = config.tracking[i];
+    for (let ii = 0; ii < t.trackingIds.length - 1; ++ii) {
+      const name = t.trackingIds[ii];
+      const gpsConfig: GpsClientConfig = {
+        apiEndpoint: process.env.API_ENDPOINT!,
+        wsEndpoint: process.env.WS_ENDPOINT!,
+        name: name,
+        accessKey: config.accessToken,
+      };
+      const gps = new GpsClient(gpsConfig);
+      console.log('init gps client', gpsConfig);
+      await gps.init();
+
+      let points: LatLng[] = [];
+      if (gps.tracking) {
+        gps.tracking.logs.forEach((log) => {
+          const p = gps.points.get(log.started);
+          if (p) {
+            points = points.concat(p.map((v) => new LatLng(v.lat, v.lng)));
+          }
+        });
+      }
+
+      const polyline = new L.Polyline(points, {
+        color: t.color,
+        smoothFactor: 0,
+      });
+      polyline.addTo(map);
+    }
+  }
+
+  /*
   const gpsConfig: GpsClientConfig = {
     apiEndpoint: process.env.API_ENDPOINT!,
     wsEndpoint: process.env.WS_ENDPOINT!,
@@ -101,5 +190,5 @@ export async function app(config: Config) {
     position: 'bottomleft',
   });
 
-  layerControl.addTo(map);
+  layerControl.addTo(map);*/
 }

@@ -27,29 +27,13 @@
       import { app } from './index.ts';
 
       const param = new URLSearchParams(window.location.search);
-      const key = process.env.KEY;
-      const accessToken = process.env.ACCESS_TOKEN;
-      const location = process.env.LOCATION;
-      let tile = process.env.TILE;
-      let color = process.env.PATH_COLOR;
+      let tile = 'openstreetmap';
 
-      if (param.get('color')) {
-        color = param.get('color');
-      }
       if (param.get('tile')) {
         tile = param.get('tile');
       }
-      console.log('tile', tile, color, location);
 
-      if (!color) color = 'eb384a';
-
-      app({
-        key,
-        accessToken,
-        location,
-        tile,
-        color,
-      });
+      app(tile);
     </script>
   </body>
 </html>

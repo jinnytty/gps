@@ -1,5 +1,5 @@
 {
-  "extends": "@jinnytty-gps/tsconfig/nestjs.json",
+  "extends": "@jinnytty-gps/tsconfig/nextjs.json",
   "include": ["./src/**/*.ts"],
   "exclude": ["node_modules"],
   "compilerOptions": {
