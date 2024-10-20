@@ -22,7 +22,7 @@ export interface MapMarker {
   name: string;
   lat: number;
   lng: number;
-  icon: MapIcon;
+  icon?: MapIcon;
 }
 
 export interface MapTracking {

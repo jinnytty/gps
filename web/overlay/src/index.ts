@@ -164,15 +164,18 @@ export async function app(config: Config) {
       const req = await fetch(`${apiEndpoint}/config/${config.marker[i]}`);
       const mConfig: MapMarker[] = await req.json();
       mConfig.forEach((m) => {
-        const icon = L.icon({
-          iconUrl: m.icon.url,
-          iconSize: [m.icon.width, m.icon.height],
-          iconAnchor: [m.icon.anchorX, m.icon.anchorY],
-        });
-        const marker = L.marker([m.lat, m.lng], {
-          icon,
+        const opt: L.MarkerOptions = {
           zIndexOffset: 900,
-        }).addTo(map);
+        };
+        if (m.icon) {
+          const icon = L.icon({
+            iconUrl: m.icon.url,
+            iconSize: [m.icon.width, m.icon.height],
+            iconAnchor: [m.icon.anchorX, m.icon.anchorY],
+          });
+          opt.icon = icon;
+        }
+        const marker = L.marker([m.lat, m.lng], opt).addTo(map);
       });
     } catch (e) {
       console.log('unabel to display marker ', config.marker[i]);
