@@ -1,7 +1,7 @@
 import { LatLng } from 'leaflet';
 import * as L from 'leaflet';
 import { GpsClient, GpsClientConfig } from '@jinnytty-gps/gps-client';
-import { Log, Point } from '@jinnytty-gps/api-model';
+import { Log, MapMarker, Point } from '@jinnytty-gps/api-model';
 
 export interface TileData {
   name: string;
@@ -47,6 +47,7 @@ export interface Config {
   zoom: number;
   tile?: string;
   gps: GpsConfig[];
+  marker: string[];
 }
 
 export interface GpsConfig {
@@ -152,5 +153,28 @@ export async function app(config: Config) {
         marker.setLatLng(newPoint);
       }
     });
+  }
+
+  const apiEndpoint = process.env.API_ENDPOINT!;
+
+  for (let i = 0; i < config.marker.length; ++i) {
+    if (config.marker[i].length === 0) continue;
+    try {
+      const req = await fetch(`${apiEndpoint}/config/${config.marker[i]}`);
+      const mConfig: MapMarker[] = await req.json();
+      mConfig.forEach((m) => {
+        const icon = L.icon({
+          iconUrl: m.icon.url,
+          iconSize: [m.icon.width, m.icon.height],
+          iconAnchor: [m.icon.anchorX, m.icon.anchorY],
+        });
+        const marker = L.marker([m.lat, m.lng], {
+          icon,
+          zIndexOffset: 900,
+        }).addTo(map);
+      });
+    } catch (e) {
+      console.log('unabel to display marker ', config.marker[i]);
+    }
   }
 }

@@ -10,14 +10,25 @@ export interface Log {
   last: number;
 }
 
+export interface MapIcon {
+  url: string;
+  width: number;
+  height: number;
+  anchorX: number;
+  anchorY: number;
+}
+
+export interface MapMarker {
+  name: string;
+  lat: number;
+  lng: number;
+  icon: MapIcon;
+}
+
 export interface MapTracking {
   name: string;
+  icon: MapIcon;
   color: string;
-  icon: string;
-  iconWidth: number;
-  iconHeight: number;
-  iconAnchorX: number;
-  iconAnchorY: number;
   trackingIds: string[];
 }
 

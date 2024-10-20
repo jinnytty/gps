@@ -72,12 +72,19 @@ export function parseParams(param: URLSearchParams): Config {
     gps.push(gpsc);
   });
 
+  let marker: string[] = [];
+  const pm = str0('marker');
+  if (pm) {
+    marker = pm.split(',');
+  }
+
   const config: Config = {
     lat: num('lat', 0),
     lng: num('lng', 0),
     zoom: num('zoom', 12),
     tile: str0('tile'),
     gps,
+    marker,
   };
 
   return config;
