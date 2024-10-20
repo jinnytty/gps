@@ -34,10 +34,11 @@ export default class GpsController {
     const token = await this.prisma.getClient().accessToken.findFirst({
       where: {
         token: accessToken,
+        key: id,
       },
     });
     console.log('token', id, accessToken, token);
-    if (!token || token.key !== id) {
+    if (!token) {
       throw new ForbiddenException();
     }
   }
