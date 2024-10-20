@@ -1,7 +1,12 @@
 import { LatLng, Map } from 'leaflet';
 import * as L from 'leaflet';
 import { GpsClient, GpsClientConfig } from '@jinnytty-gps/gps-client';
-import { Log, MapDisplayConfig, Point } from '@jinnytty-gps/api-model';
+import {
+  Log,
+  MapDisplayConfig,
+  MapMarker,
+  Point,
+} from '@jinnytty-gps/api-model';
 
 export interface TileData {
   name: string;
@@ -146,38 +151,49 @@ export async function app(tile: string) {
     }
   }
 
-  /*
-  const gpsConfig: GpsClientConfig = {
-    apiEndpoint: process.env.API_ENDPOINT!,
-    wsEndpoint: process.env.WS_ENDPOINT!,
-    name: config.key,
-    accessKey: config.accessToken,
-  };
-  const gps = new GpsClient(gpsConfig);
-  console.log('init gps client');
-  await gps.init();
-  console.log(gps.tracking);
-
-  let points: LatLng[] = [];
-  if (gps.tracking) {
-    gps.tracking.logs.forEach((log) => {
-      const p = gps.points.get(log.started);
-      if (p) {
-        points = points.concat(p.map((v) => new LatLng(v.lat, v.lng)));
+  if (config.marker) {
+    config.marker.forEach((m) => {
+      const opt: L.MarkerOptions = {
+        zIndexOffset: 900,
+      };
+      if (m.icon) {
+        const icon = L.icon({
+          iconUrl: m.icon.url,
+          iconSize: [m.icon.width, m.icon.height],
+          iconAnchor: [m.icon.anchorX, m.icon.anchorY],
+        });
+        opt.icon = icon;
       }
+      const marker = L.marker([m.lat, m.lng], opt).addTo(map);
     });
   }
-  console.log('point count for line', points.length);
+  if (Array.isArray(config.markerId)) {
+    for (let i = 0; i < config.markerId.length; ++i) {
+      if (config.markerId[i].length === 0) continue;
+      try {
+        const req = await fetch(`${apiEndpoint}/config/${config.markerId[i]}`);
+        const mConfig: MapMarker[] = await req.json();
+        mConfig.forEach((m) => {
+          const opt: L.MarkerOptions = {
+            zIndexOffset: 900,
+          };
+          if (m.icon) {
+            const icon = L.icon({
+              iconUrl: m.icon.url,
+              iconSize: [m.icon.width, m.icon.height],
+              iconAnchor: [m.icon.anchorX, m.icon.anchorY],
+            });
+            opt.icon = icon;
+          }
+          const marker = L.marker([m.lat, m.lng], opt).addTo(map);
+        });
+      } catch (e) {
+        console.log('unabel to display marker ', config.markerId[i]);
+      }
+    }
+  }
 
-  const polyline = new L.Polyline(points, {
-    color: '#' + config.color,
-    smoothFactor: 0,
-  });
-  polyline.addTo(map);
-  gps.on('point', (p: Point) => {
-    polyline.addLatLng(new LatLng(p.lat, p.lng));
-  });
-
+  /*
   const LayerControl = L.Control.extend({
     onAdd: function () {
       const div = L.DomUtil.create('div');

@@ -38,6 +38,8 @@ export interface MapDisplayConfig {
   lng: number;
   zoom: number;
   tracking: MapTracking[];
+  marker?: MapMarker[];
+  markerId?: string[];
 }
 
 export type LogPoints = Log & { points: Point[] };
