@@ -46,3 +46,12 @@ model AccessToken {
   @@index([token])
   @@map("access_token")
 }
+
+model MapConfig {
+  id      Int      @id @default(autoincrement())
+  name    String
+  created DateTime @db.Timestamptz(6)
+  data    Json
+
+  @@map("map_config")
+}

@@ -10,6 +10,25 @@ export interface Log {
   last: number;
 }
 
+export interface MapTracking {
+  name: string;
+  color: string;
+  icon: string;
+  iconWidth: number;
+  iconHeight: number;
+  iconAnchorX: number;
+  iconAnchorY: number;
+  trackingIds: string[];
+}
+
+export interface MapDisplayConfig {
+  accessToken: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  tracking: MapTracking[];
+}
+
 export type LogPoints = Log & { points: Point[] };
 
 export interface Point {

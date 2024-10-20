@@ -27,3 +27,11 @@ create table access_token (
   created timestamptz not null
 );
 create index on access_token(token);
+
+create table map_config (
+  id serial primary key,
+  name text not null,
+  created timestamptz not null,
+  data jsonb not null
+);
+

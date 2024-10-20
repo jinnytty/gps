@@ -10,9 +10,14 @@ import {
   Res,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service.js';
-import { Log, LogPoints, Tracking } from '@jinnytty-gps/api-model';
+import {
+  Log,
+  LogPoints,
+  MapDisplayConfig,
+  Tracking,
+} from '@jinnytty-gps/api-model';
 import { AccessToken } from '../AccessToken.js';
-import { logToApi, trackingToApi } from '@jinnytty-gps/prisma';
+import { MapConfig, logToApi, trackingToApi } from '@jinnytty-gps/prisma';
 import type { Request, Response } from 'express';
 import { RedisService } from '../common/redis.service.js';
 import { pointTextKey } from '@jinnytty-gps/redis';
@@ -35,6 +40,19 @@ export default class GpsController {
     if (!token || token.key !== id) {
       throw new ForbiddenException();
     }
+  }
+
+  @Get('/config/:id')
+  async mapConfig(@Param('id') id: string): Promise<MapDisplayConfig> {
+    const config = await this.prisma.getClient().mapConfig.findFirst({
+      where: {
+        name: id,
+      },
+    });
+    if (!config) {
+      throw new NotFoundException();
+    }
+    return config.data as any;
   }
 
   @Get('/:id')
