@@ -21,7 +21,7 @@ create index on gps_log(started);
 
 create table access_token (
   id serial primary key,
-  key text not null references gps_tracking(key) on delete cascade,
+  key text not null references gps_tracking(key) on update cascade on delete cascade,
   token text not null,
   readonly boolean not null default true,
   created timestamptz not null
