@@ -64,6 +64,13 @@ export async function app(tile: string) {
   const hasPoints: boolean[] = [];
   const iconMarker: L.Marker[] = [];
 
+  const center = () => {
+    const points = iconMarker.map((m) => m.getLatLng());
+    map.fitBounds(L.latLngBounds(points), {
+      maxZoom: config.zoom,
+    });
+  };
+
   // do the last tracking as live first
   for (let i = 0; i < config.tracking.length; ++i) {
     const t = config.tracking[i];
@@ -175,6 +182,7 @@ export async function app(tile: string) {
     }
   }
   iconMarker.forEach((m) => m.addTo(map));
+  center();
 
   if (config.marker) {
     config.marker.forEach((m) => {
