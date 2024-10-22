@@ -61,6 +61,9 @@ export async function app(tile: string) {
     attribution: tileData.attribution,
   }).addTo(map);
 
+  const hasPoints: boolean[] = [];
+  const iconMarker: L.Marker[] = [];
+
   // do the last tracking as live first
   for (let i = 0; i < config.tracking.length; ++i) {
     const t = config.tracking[i];
@@ -90,10 +93,13 @@ export async function app(tile: string) {
     let mLat = config.lat;
     let mLng = config.lng;
     if (points.length > 0) {
+      hasPoints.push(true);
       const p = points[points.length - 1];
 
       mLat = p.lat;
       mLng = p.lng;
+    } else {
+      hasPoints.push(false);
     }
 
     const polyline = new L.Polyline(points, {
@@ -106,9 +112,11 @@ export async function app(tile: string) {
       iconSize: [t.icon.width, t.icon.height],
       iconAnchor: [t.icon.anchorX, t.icon.anchorY],
     });
-    const marker = L.marker([mLat, mLng], { icon, zIndexOffset: 1001 }).addTo(
-      map
-    );
+    const marker = L.marker([mLat, mLng], { icon, zIndexOffset: 1001 });
+    if (points.length > 0) {
+      marker.addTo(map);
+    }
+    iconMarker.push(marker);
     gps.on('point', (p: Point) => {
       const newPoint = new LatLng(p.lat, p.lng);
       polyline.addLatLng(newPoint);
@@ -122,6 +130,9 @@ export async function app(tile: string) {
   // draw the remaining as static line
   for (let i = 0; i < config.tracking.length; ++i) {
     const t = config.tracking[i];
+    let lastLat = config.lat;
+    let lastLng = config.lng;
+
     for (let ii = 0; ii < t.trackingIds.length - 1; ++ii) {
       const name = t.trackingIds[ii];
       const gpsConfig: GpsClientConfig = {
@@ -144,13 +155,26 @@ export async function app(tile: string) {
         });
       }
 
+      if (points.length > 0) {
+        lastLng = points[points.length - 1].lng;
+        lastLat = points[points.length - 1].lat;
+      }
+
       const polyline = new L.Polyline(points, {
         color: t.color,
         smoothFactor: 0,
       });
       polyline.addTo(map);
     }
+
+    if (hasPoints.length >= i && !hasPoints[i]) {
+      if (iconMarker.length >= i) {
+        const newPoint = new LatLng(lastLat, lastLng);
+        iconMarker[i].setLatLng(newPoint);
+      }
+    }
   }
+  iconMarker.forEach((m) => m.addTo(map));
 
   if (config.marker) {
     config.marker.forEach((m) => {
