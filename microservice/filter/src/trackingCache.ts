@@ -1,11 +1,16 @@
 import { PrismaClient } from '@jinnytty-gps/prisma';
 
-const trackingCache: Map<string, number> = new Map();
+export interface Tracking {
+  id: number;
+  startedTimestamp: number;
+  ended: boolean;
+}
+const trackingCache: Map<string, Tracking> = new Map();
 
 export async function getTrackingId(
   client: PrismaClient,
   key: string
-): Promise<number> {
+): Promise<Tracking> {
   if (trackingCache.has(key)) {
     return trackingCache.get(key)!;
   }
@@ -17,6 +22,12 @@ export async function getTrackingId(
   });
   if (!db) throw new Error('no tracking for ' + key);
 
-  trackingCache.set(key, db.id);
-  return db.id;
+  const tracking: Tracking = {
+    id: db.id,
+    startedTimestamp: Math.round(db.started.getTime() / 1000),
+    ended: db.ended !== null,
+  };
+
+  trackingCache.set(key, tracking);
+  return tracking;
 }

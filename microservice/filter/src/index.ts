@@ -19,7 +19,7 @@ import { GpsLog, PrismaClient } from '@jinnytty-gps/prisma';
 import { Kafka, Consumer, Producer } from 'kafkajs';
 import { Point, RawPoint } from '@jinnytty-gps/model';
 import { GPS } from '@jinnytty-gps/geo';
-import { getTrackingId } from './trackingCache.js';
+import { Tracking, getTrackingId } from './trackingCache.js';
 import {
   pointJsonKey,
   pointRawKey,
@@ -30,6 +30,7 @@ import readline from 'readline';
 import { Readable } from 'stream';
 
 interface ServiceConfig {
+  ignoreTrackingStartTime: boolean;
   inputTopic: string;
   pointOutputTopic: string;
   logOutputTopic: string;
@@ -39,6 +40,7 @@ const ServiceConfigOpt: ArgumentConfig<ServiceConfig> = {
   inputTopic: { type: String, defaultValue: Topics.gpsTrackingOutput },
   pointOutputTopic: { type: String, defaultValue: Topics.gpsFilterOutput },
   logOutputTopic: { type: String, defaultValue: Topics.gpsFilterLogUpdate },
+  ignoreTrackingStartTime: { type: Boolean, defaultValue: true },
 };
 
 interface Config extends ServiceConfig, KafkaConfig, RedisConfig, FileConfig {}
@@ -172,16 +174,32 @@ await consumer.run({
       timestamp: Number(msg.point.timestamp),
     };
 
-    let trackingId = 0;
+    let tracking: Tracking | undefined;
     try {
-      trackingId = await getTrackingId(client, msg.key);
+      tracking = await getTrackingId(client, msg.key);
     } catch (e) {
       logger.error({ error: e }, 'unable to get trackingId');
       return;
     }
-    logger.trace({ trackingId }, 'trackingId');
+    logger.trace(
+      { tracking, ignoreTrackingStartTime: config.ignoreTrackingStartTime },
+      'tracking'
+    );
 
-    const { log, gps } = await getLog(trackingId, point);
+    if (tracking.ended) {
+      logger.trace({}, 'tracking already ended');
+      return;
+    }
+
+    if (
+      !config.ignoreTrackingStartTime &&
+      tracking.startedTimestamp > point.startTimestamp
+    ) {
+      logger.trace({}, 'log of point started before tracking started');
+      return;
+    }
+
+    const { log, gps } = await getLog(tracking.id, point);
     logger.trace({ log }, 'log');
 
     if (point.timestamp <= gps.lastTimestamp) {
@@ -195,12 +213,12 @@ await consumer.run({
     const newPoint = gps.process(point);
 
     // insert raw point
-    logger.trace({ trackingId, point }, 'insert raw point');
+    logger.trace({ tracking, point }, 'insert raw point');
     await redis.APPEND(pointRawKey(log), JSON.stringify(msg.point) + '\n');
 
     if (newPoint) {
       // insert point
-      logger.trace({ trackingId, point: newPoint }, 'insert calculated point');
+      logger.trace({ tracking, point: newPoint }, 'insert calculated point');
       await redis.APPEND(pointJsonKey(log), JSON.stringify(newPoint) + '\n');
       const text = newPoint.timestamp + ',' + newPoint.lat + ',' + newPoint.lng;
       await redis.APPEND(pointTextKey(log), text + '\n');
